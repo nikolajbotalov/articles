@@ -1,36 +1,17 @@
 package main
 
 import (
-	"PersonalBlog/internal/adapters/db"
-	"PersonalBlog/internal/config"
-	"PersonalBlog/internal/handlers"
-	repositories "PersonalBlog/internal/repositories/article"
-	usecases "PersonalBlog/internal/usecases/article"
-	"fmt"
-	"github.com/gin-gonic/gin"
-	"log/slog"
+	"PersonalBlog/internal/app"
 )
 
 func main() {
-	cfg := config.GetConfig()
-
-	dbPool, err := db.NewPostgreSQLDB(cfg.PostgreSQL)
+	// инициализация приложения
+	application, err := app.NewApp()
 	if err != nil {
-		slog.Error("Failed to initialize database", err)
-		return
+		panic(err)
 	}
-	defer dbPool.Close()
+	defer application.Close()
 
-	articleRepo := repositories.NewArticleRepository(dbPool)
-	articleUseCase := usecases.NewArticleUseCase(articleRepo)
-
-	router := gin.Default()
-	handlers.SetupRoutes(router, articleUseCase)
-
-	address := fmt.Sprintf("%s:%s", cfg.Listen.BindIP, cfg.Listen.Port)
-	serverStartErr := router.Run(address)
-	if serverStartErr != nil {
-		slog.Info("Unable to start server", serverStartErr)
-		return
-	}
+	// запуск сервера
+	application.Server.Run()
 }
