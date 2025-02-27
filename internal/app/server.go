@@ -29,7 +29,7 @@ func NewServer(cfg *config.Config, articleUseCase usecases.ArticleUseCase, logge
 	router.Use(ginRecoveryWithLogging(logger))
 
 	// настройка маршрутов
-	handlers.SetupRoutes(router, articleUseCase)
+	handlers.SetupRoutes(router, articleUseCase, logger)
 
 	// создание HTTP сервера
 	address := fmt.Sprintf("%s: %s", cfg.Listen.BindIP, cfg.Listen.Port)

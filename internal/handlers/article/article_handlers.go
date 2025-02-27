@@ -5,40 +5,41 @@ import (
 	usecases "PersonalBlog/internal/usecases/article"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"log/slog"
+	"go.uber.org/zap"
 	"net/http"
 )
 
-func GetArticles(uc usecases.ArticleUseCase) gin.HandlerFunc {
+func GetArticles(uc usecases.ArticleUseCase, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
 		articles, err := uc.GetAllArticles(ctx)
 		if err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to get articles", err)
+			logger.Error("Failed to get articles", zap.Error(err))
+			handleError(c, http.StatusInternalServerError, "Failed to get articles", err, logger)
 		}
 
 		c.JSON(http.StatusOK, articles)
 	}
 }
 
-func CreateArticle(uc usecases.ArticleUseCase) gin.HandlerFunc {
+func CreateArticle(uc usecases.ArticleUseCase, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		var newArticle domain.Article
 
 		// Парсим JSON из тела запроса
-		if err := parseJSON(c, &newArticle); err != nil {
+		if err := parseJSON(c, &newArticle, logger); err != nil {
 			return
 		}
 
 		// Валидация данных
-		if err := validateArticle(c, newArticle); err != nil {
+		if err := validateArticle(c, newArticle, logger); err != nil {
 			return
 		}
 
 		if err := uc.CreateArticle(ctx, &newArticle); err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to create article", err)
+			handleError(c, http.StatusInternalServerError, "Failed to create article", err, logger)
 			return
 		}
 
@@ -47,7 +48,7 @@ func CreateArticle(uc usecases.ArticleUseCase) gin.HandlerFunc {
 	}
 }
 
-func GetArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
+func GetArticleByID(uc usecases.ArticleUseCase, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		// Получаем ID статьи из параметров запроса
@@ -55,7 +56,7 @@ func GetArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 
 		article, err := uc.GetArticleByID(ctx, id)
 		if err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to get article", err)
+			handleError(c, http.StatusInternalServerError, "Failed to get article", err, logger)
 		}
 
 		// Возвращаем статью в формате JSON
@@ -63,7 +64,7 @@ func GetArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 	}
 }
 
-func UpdateArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
+func UpdateArticleByID(uc usecases.ArticleUseCase, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		// Получаем ID статьи из параметров запроса
@@ -71,18 +72,18 @@ func UpdateArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 
 		// Парсим JSON из тела запроса
 		var updateArticle domain.Article
-		if err := parseJSON(c, &updateArticle); err != nil {
+		if err := parseJSON(c, &updateArticle, logger); err != nil {
 			return
 		}
 
 		// Валидация данных
-		if err := validateArticle(c, updateArticle); err != nil {
+		if err := validateArticle(c, updateArticle, logger); err != nil {
 			return
 		}
 
 		err := uc.UpdateArticle(ctx, id, &updateArticle)
 		if err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to update article", err)
+			handleError(c, http.StatusInternalServerError, "Failed to update article", err, logger)
 		}
 
 		// Возвращаем обновленную статью
@@ -91,7 +92,7 @@ func UpdateArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 	}
 }
 
-func DeleteArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
+func DeleteArticleByID(uc usecases.ArticleUseCase, logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		// Получаем ID статьи из параметров запроса
@@ -99,7 +100,7 @@ func DeleteArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 
 		err := uc.DeleteArticle(ctx, id)
 		if err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to delete article", err)
+			handleError(c, http.StatusInternalServerError, "Failed to delete article", err, logger)
 		}
 
 		// Возвращаем успешный ответ
@@ -108,9 +109,9 @@ func DeleteArticleByID(uc usecases.ArticleUseCase) gin.HandlerFunc {
 }
 
 // парсит JSON из тела запроса и возвращает ошибку, если что-то пошло не так
-func parseJSON(c *gin.Context, article *domain.Article) error {
+func parseJSON(c *gin.Context, article *domain.Article, logger *zap.Logger) error {
 	if err := c.BindJSON(article); err != nil {
-		slog.Error("Failed to bind JSON", "error", err)
+		logger.Error("Failed to bind JSON", zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return err
 	}
@@ -119,9 +120,9 @@ func parseJSON(c *gin.Context, article *domain.Article) error {
 }
 
 // проверка на пустые данные в полях статьи
-func validateArticle(c *gin.Context, article domain.Article) error {
+func validateArticle(c *gin.Context, article domain.Article, logger *zap.Logger) error {
 	if article.Author == "" || article.Title == "" || article.Content == "" {
-		slog.Error("Validation failed", "article", article)
+		logger.Error("Validation failed", zap.Any("article", article))
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Author, title, and content are required"})
 		return fmt.Errorf("validation failed")
 	}
@@ -129,11 +130,11 @@ func validateArticle(c *gin.Context, article domain.Article) error {
 	return nil
 }
 
-func handleError(c *gin.Context, statusCode int, message string, err error) {
+func handleError(c *gin.Context, statusCode int, message string, err error, logger *zap.Logger) {
 	if err != nil {
-		slog.Error(message, "error", err)
+		logger.Error(message, zap.Error(err))
 	} else {
-		slog.Error(message)
+		logger.Error(message)
 	}
 	c.AbortWithStatusJSON(statusCode, gin.H{"error": message})
 }
