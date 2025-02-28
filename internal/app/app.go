@@ -37,7 +37,7 @@ func NewApp() (*App, error) {
 	}
 
 	articleRepo := repositories.NewArticleRepository(dbPool, zapLogger)
-	articleUseCase := usecases.NewArticleUseCase(articleRepo)
+	articleUseCase := usecases.NewArticleUseCase(articleRepo, zapLogger)
 
 	// инициализация сервера
 	server := NewServer(cfg, articleUseCase, zapLogger)
