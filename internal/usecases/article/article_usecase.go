@@ -17,10 +17,10 @@ type ArticleUseCase interface {
 }
 
 type articleUseCase struct {
-	repo articleRepo.ArticleRepository
+	repo articleRepo.Repository
 }
 
-func NewArticleUseCase(repo articleRepo.ArticleRepository) ArticleUseCase {
+func NewArticleUseCase(repo articleRepo.Repository) ArticleUseCase {
 	return &articleUseCase{repo: repo}
 }
 
