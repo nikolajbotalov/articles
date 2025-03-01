@@ -2,12 +2,14 @@ package app
 
 import (
 	"PersonalBlog/internal/config"
-	"PersonalBlog/internal/handlers"
+	"PersonalBlog/internal/handlers/article"
 	usecases "PersonalBlog/internal/usecases/article"
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -29,7 +31,10 @@ func NewServer(cfg *config.Config, articleUseCase usecases.ArticleUseCase, logge
 	router.Use(ginRecoveryWithLogging(logger))
 
 	// настройка маршрутов
-	handlers.SetupRoutes(router, articleUseCase, logger)
+	handlers.SetupArticleRoutes(router, articleUseCase, logger)
+
+	// настройка Swagger
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// создание HTTP сервера
 	address := fmt.Sprintf("%s: %s", cfg.Listen.BindIP, cfg.Listen.Port)
