@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "PersonalBlog/docs"
+	// _ "PersonalBlog/docs"
 	"PersonalBlog/internal/app"
 )
 

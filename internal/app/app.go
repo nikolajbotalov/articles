@@ -30,7 +30,7 @@ func NewApp() (*App, error) {
 	zapLogger.Debug("config loaded", zap.Any("config", cfg))
 
 	// иниализация БД
-	dbPool, err := db.NewPostgreSQLDB(cfg.PostgreSQL)
+	dbPool, err := db.NewPostgreSQLDB(cfg.PostgreSQL, zapLogger)
 	if err != nil {
 		zapLogger.Error("failed to initialize db", zap.Error(err))
 		return nil, err
