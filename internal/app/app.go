@@ -6,14 +6,15 @@ import (
 	"PersonalBlog/internal/logger"
 	repositories "PersonalBlog/internal/repositories/article"
 	usecases "PersonalBlog/internal/usecases/article"
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"go.uber.org/zap"
 )
 
 type App struct {
 	Logger *zap.Logger
 	Config *config.Config
-	DB     *pgxpool.Pool
+	DB     *db.PostgreSQLDB
 	Server *Server
 }
 
@@ -27,16 +28,26 @@ func NewApp() (*App, error) {
 
 	// инициализация конфига
 	cfg := config.GetConfig()
-	zapLogger.Debug("config loaded", zap.Any("config", cfg))
+	zapLogger.Debug("Config loaded",
+		zap.String("db_host", cfg.PostgreSQL.Host),
+		zap.String("db_port", cfg.PostgreSQL.Port),
+		zap.String("db_username", cfg.PostgreSQL.Username),
+		zap.String("db_database", cfg.PostgreSQL.Database))
+
+	// запуск миграций
+	if err := db.RunMigrations(cfg.PostgreSQL, zapLogger); err != nil {
+		zapLogger.Error("Failed to run migrations", zap.Error(err))
+		return nil, err
+	}
 
 	// иниализация БД
-	dbPool, err := db.NewPostgreSQLDB(cfg.PostgreSQL, zapLogger)
+	dbInstance, err := db.NewPostgreSQLDB(cfg.PostgreSQL, zapLogger)
 	if err != nil {
 		zapLogger.Error("failed to initialize db", zap.Error(err))
 		return nil, err
 	}
 
-	articleRepo := repositories.NewArticleRepository(dbPool, zapLogger)
+	articleRepo := repositories.NewArticleRepository(dbInstance.Pool(), zapLogger)
 	articleUseCase := usecases.NewArticleUseCase(articleRepo, zapLogger)
 
 	// инициализация сервера
@@ -45,7 +56,7 @@ func NewApp() (*App, error) {
 	return &App{
 		Logger: zapLogger,
 		Config: cfg,
-		DB:     dbPool,
+		DB:     dbInstance,
 		Server: server,
 	}, nil
 }
@@ -53,5 +64,7 @@ func NewApp() (*App, error) {
 // Close освобождает ресурсы приложения
 func (a *App) Close() {
 	a.Logger.Info("Closing application")
-	a.DB.Close()
+	if err := a.DB.Close(); err != nil {
+		a.Logger.Error("Failed to close DB", zap.Error(err))
+	}
 }

@@ -37,7 +37,7 @@ func NewServer(cfg *config.Config, articleUseCase usecases.ArticleUseCase, logge
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// создание HTTP сервера
-	address := fmt.Sprintf("%s: %s", cfg.Listen.BindIP, cfg.Listen.Port)
+	address := fmt.Sprintf("%s:%s", cfg.Listen.BindIP, cfg.Listen.Port)
 	return &Server{
 		httpServer: &http.Server{
 			Addr:    address,

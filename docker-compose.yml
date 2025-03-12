@@ -1,0 +1,31 @@
+version: '3.9'
+services:
+  app:
+    build: .
+    image: article-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - BIND_IP=0.0.0.0
+      - PORT=8080
+      - PSQL_USERNAME=postgres
+      - PSQL_PASSWORD=admin
+      - PSQL_HOST=db
+      - PSQL_PORT=5432
+      - PSQL_DB=blog
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=blog
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
